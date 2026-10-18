@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Porsche 911 GT3 RS (992) - 3D Procedural Showroom</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0a0a0c;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #fff;
+            user-select: none;
+        }
+        #ui {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            z-index: 10;
+            background: rgba(15, 15, 20, 0.75);
+            backdrop-filter: blur(12px);
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 320px;
+        }
+        h1 {
+            margin: 0 0 4px 0;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
+        .subtitle {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+        button:hover {
+            background: #fff;
+            color: #000;
+        }
+        .badge {
+            display: inline-block;
+            background: #e5b80b;
+            color: #000;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="ui">
+        <h1>911 GT3 RS <span class="badge">WEISSACH</span></h1>
+        <div class="subtitle">Carrara White Metallic • Custom PBR Textures</div>
+        <div class="controls">
+            <button id="toggleWing">Toggle DRS Swan-Neck Wing</button>
+            <button id="toggleLights">Toggle Matrix LED Lights</button>
+            <button id="toggleSpin">Toggle Turntable Spin</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+        // --- 1. SCENE, CAMERA & RENDERER SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0c0c0f);
+        scene.fog = new THREE.FogExp2(0x0c0c0f, 0.035);
+
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(4.8, 2.0, 5.2);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+        document.body.appendChild(renderer.domElement);
+
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02;
+        controls.minDistance = 2.8;
+        controls.maxDistance = 14;
+        controls.target.set(0, 0.55, 0);
+
+        // --- 2. PROCEDURAL CUSTOM TEXTURE GENERATORS ---
+        // A. Woven 2x2 Twill Carbon Fiber Texture + Normal Map
+        function createCarbonFiberTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#151515';
+            ctx.fillRect(0, 0, 256, 256);
+
+            const step = 16;
+            for (let y = 0; y < 256; y += step) {
+                for (let x = 0; x < 256; x += step) {
+                    const offset = (y / step) % 2 === 0 ? 0 : step / 2;
+                    const grad1 = ctx.createLinearGradient(x + offset, y, x + offset + step, y + step);
+                    grad1.addColorStop(0, '#0c0c0c');
+                    grad1.addColorStop(0.5, '#323236');
+                    grad1.addColorStop(1, '#0c0c0c');
+                    ctx.fillStyle = grad1;
+                    ctx.fillRect((x + offset) % 256, y, step / 2, step);
+
+                    const grad2 = ctx.createLinearGradient(x + offset + step/2, y, x + offset + step, y + step);
+                    grad2.addColorStop(0, '#252528');
+                    grad2.addColorStop(0.5, '#0a0a0c');
+                    grad2.addColorStop(1, '#252528');
+                    ctx.fillStyle = grad2;
+                    ctx.fillRect((x + offset + step / 2) % 256, y, step / 2, step);
+                }
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(28, 28);
+            return tex;
+        }
+
+        // B. Cross-Drilled Ceramic Brake Rotor Texture
+        function createBrakeRotorTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#55585c';
+            ctx.fillRect(0, 0, 512, 512);
+
+            const cx = 256, cy = 256;
+            // Radial brush marks
+            for (let r = 80; r < 245; r += 2) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.strokeStyle = r % 4 === 0 ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.12)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+
+            // Cross-drilled ventilation holes
+            ctx.fillStyle = '#111';
+            const numArms = 24;
+            for (let a = 0; a < numArms; a++) {
+                const baseAngle = (a / numArms) * Math.PI * 2;
+                for (let i = 0; i < 5; i++) {
+                    const rad = 115 + i * 26;
+                    const angle = baseAngle + i * 0.045;
+                    ctx.beginPath();
+                    ctx.arc(cx + Math.cos(angle) * rad, cy + Math.sin(angle) * rad, 4.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            const tex = new THREE.CanvasTexture(canvas);
+            return tex;
+        }
+
+        // C. GT3 RS Side Stripe Decal Texture
+        function createSideDecalTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            ctx.clearRect(0, 0, 1024, 256);
+            ctx.fillStyle = '#111111';
+            ctx.fillRect(40, 95, 944, 52);
+            ctx.fillRect(40, 155, 944, 10);
+
+            // Clear cutout for "GT3 RS" text
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.font = 'italic 900 44px "Arial Black", Impact, sans-serif';
+            ctx.fillText('GT3 RS', 360, 137);
+            ctx.globalCompositeOperation = 'source-over';
+
+            const tex = new THREE.CanvasTexture(canvas);
+            return tex;
+        }
+
+        // --- 3. PBR MATERIALS ---
+        const carbonTex = createCarbonFiberTexture();
+        const rotorTex = createBrakeRotorTexture();
+        const decalTex = createSideDecalTexture();
+
+        // Carrara White Metallic Paint with Clearcoat
+        const whitePaintMat = new THREE.MeshPhysicalMaterial({
+            color: 0xf6f7f9,
+            metalness: 0.15,
+            roughness: 0.12,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.04,
+            reflectivity: 1.0
+        });
+
+        // Exposed Gloss Weave Carbon Fiber (Weissach Package)
+        const carbonMat = new THREE.MeshPhysicalMaterial({
+            map: carbonTex,
+            bumpMap: carbonTex,
+            bumpScale: 0.003,
+            roughness: 0.22,
+            metalness: 0.3,
+            clearcoat: 0.9,
+            clearcoatRoughness: 0.08
+        });
+
+        // Satin Black Aero Trim & Louvers
+        const satinBlackMat = new THREE.MeshStandardMaterial({
+            color: 0x141416,
+            roughness: 0.55,
+            metalness: 0.2
+        });
+
+        // Tinted Showroom Glass
+        const glassMat = new THREE.MeshPhysicalMaterial({
+            color: 0x0a0d12,
+            metalness: 0.1,
+            roughness: 0.05,
+            transmission: 0.65,
+            transparent: true,
+            opacity: 0.88,
+            ior: 1.52
+        });
+
+        // Porsche Ceramic Composite Brakes (PCCB) Racing Yellow
+        const caliperMat = new THREE.MeshPhysicalMaterial({
+            color: 0xffcc00,
+            roughness: 0.2,
+            metalness: 0.2,
+            clearcoat: 1.0
+        });
+
+        // Michelin Pilot Sport Cup 2 R Rubber
+        const tireMat = new THREE.MeshStandardMaterial({
+            color: 0x161618,
+            roughness: 0.82,
+            metalness: 0.05
+        });
+
+        // Forged Magnesium Satin Black Rims
+        const rimMat = new THREE.MeshStandardMaterial({
+            color: 0x1c1d21,
+            roughness: 0.28,
+            metalness: 0.85
+        });
+
+        // --- 4. BUILD THE 911 GT3 RS (992) MODEL ---
+        const carGroup = new THREE.Group();
+        scene.add(carGroup);
+
+        // 4A. Sculpted Main Body Silhouette & Widebody Fenders
+        const bodyGroup = new THREE.Group();
+        carGroup.add(bodyGroup);
+
+        // Central sculpted silhouette profile (X = length from -2.28 to +2.28)
+        const profileShape = new THREE.Shape();
+        profileShape.moveTo(-2.22, 0.14); // Front splitter base
+        profileShape.lineTo(-2.18, 0.44); // Front bumper nose
+        profileShape.quadraticCurveTo(-1.85, 0.68, -1.25, 0.78); // Frunk slope
+        profileShape.lineTo(-0.45, 1.24); // Steep 911 windshield
+        profileShape.quadraticCurveTo(0.15, 1.32, 0.68, 1.21); // Double-bubble roof arch
+        profileShape.quadraticCurveTo(1.38, 1.02, 1.98, 0.82); // Classic 911 fastback decklid
+        profileShape.lineTo(2.22, 0.76); // Rear ducktail lip
+        profileShape.lineTo(2.24, 0.22); // Rear diffuser height
+        profileShape.lineTo(-2.22, 0.14);
+
+        const bodyGeo = new THREE.ExtrudeGeometry(profileShape, {
+            depth: 1.56,
+            bevelEnabled: true,
+            bevelSegments: 8,
+            steps: 2,
+            bevelSize: 0.14,
+            bevelThickness: 0.14
+        });
+        bodyGeo.center();
+        const mainBody = new THREE.Mesh(bodyGeo, whitePaintMat);
+        mainBody.position.set(0, 0.68, 0);
+        mainBody.castShadow = true;
+        mainBody.receiveShadow = true;
+        bodyGroup.add(mainBody);
+
+        // Weissach Exposed Carbon Fiber Frunk Hood with Dual Aero Nostril Outlets
+        const hoodGeo = new THREE.BoxGeometry(1.08, 0.06, 1.36);
+        const hoodMesh = new THREE.Mesh(hoodGeo, carbonMat);
+        hoodMesh.position.set(-1.55, 0.72, 0);
+        hoodMesh.rotation.z = 0.21;
+        hoodMesh.castShadow = true;
+        bodyGroup.add(hoodMesh);
+
+        // Carbon Fiber Roof Panel
+        const roofGeo = new THREE.BoxGeometry(1.06, 0.05, 1.24);
+        const roofMesh = new THREE.Mesh(roofGeo, carbonMat);
+        roofMesh.position.set(0.12, 1.28, 0);
+        roofMesh.rotation.z = -0.04;
+        bodyGroup.add(roofMesh);
+
+        // Roof Fin Strakes (Directs air over rear wing)
+        [-0.48, 0.48].forEach(zPos => {
+            const finGeo = new THREE.BoxGeometry(0.85, 0.035, 0.015);
+            const fin = new THREE.Mesh(finGeo, carbonMat);
+            fin.position.set(0.15, 1.31, zPos);
+            bodyGroup.add(fin);
+        });
+
+        // Widebody Fender flares (Front & Rear muscular 992 haunches)
+        function createFenderArch(x, y, z, radius, width, isFront) {
+            const fenderGroup = new THREE.Group();
+            fenderGroup.position.set(x, y, z);
+
+            // Outer sculpted flare
+            const archGeo = new THREE.CylinderGeometry(radius, radius, width, 32, 1, false, 0, Math.PI);
+            archGeo.rotateX(Math.PI / 2);
+            const archMesh = new THREE.Mesh(archGeo, whitePaintMat);
+            archMesh.castShadow = true;
+            fenderGroup.add(archMesh);
+
+            // Dark inner wheel well liner
+            const wellGeo = new THREE.CylinderGeometry(radius - 0.03, radius - 0.03, width + 0.02, 24, 1, false, 0, Math.PI);
+            wellGeo.rotateX(Math.PI / 2);
+            const wellMesh = new THREE.Mesh(wellGeo, satinBlackMat);
+            fenderGroup.add(wellMesh);
+
+            // Signature GT3 RS Top Fender Louvers (Active Wheel Arch Venting)
+            for (let i = -2; i <= 2; i++) {
+                const louverGeo = new THREE.BoxGeometry(0.03, 0.04, width * 0.65);
+                const louver = new THREE.Mesh(louverGeo, carbonMat);
+                const angle = 0.25 + i * 0.14;
+                louver.position.set(Math.sin(angle) * radius, Math.cos(angle) * radius, 0);
+                louver.rotation.z = -angle + 0.35;
+                fenderGroup.add(louver);
+            }
+
+            return fenderGroup;
+        }
+
+        // Front Fenders
+        bodyGroup.add(createFenderArch(-1.36, 0.38, 0.82, 0.44, 0.42, true));
+        bodyGroup.add(createFenderArch(-1.36, 0.38, -0.82, 0.44, 0.42, true));
+        // Rear Wide Haunches
+        bodyGroup.add(createFenderArch(1.36, 0.40, 0.88, 0.47, 0.48, false));
+        bodyGroup.add(createFenderArch(1.36, 0.40, -0.88, 0.47, 0.48, false));
+
+        // 4B. Greenhouse Windows (Windshield, Side Glass, Rear Screen)
+        const windshieldGeo = new THREE.PlaneGeometry(0.95, 1.38);
+        const windshield = new THREE.Mesh(windshieldGeo, glassMat);
+        windshield.position.set(-0.78, 1.03, 0);
+        windshield.rotation.x = Math.PI / 2;
+        windshield.rotation.y = -0.96;
+        bodyGroup.add(windshield);
+
+        const rearGlassGeo = new THREE.PlaneGeometry(0.95, 1.28);
+        const rearGlass = new THREE.Mesh(rearGlassGeo, glassMat);
+        rearGlass.position.set(1.12, 1.06, 0);
+        rearGlass.rotation.x = Math.PI / 2;
+        rearGlass.rotation.y = 1.18;
+        bodyGroup.add(rearGlass);
+
+        // Side Windows & Side GT3 RS Decals
+        [-1, 1].forEach(side => {
+            const sideWinGeo = new THREE.PlaneGeometry(1.45, 0.36);
+            const sideWin = new THREE.Mesh(sideWinGeo, glassMat);
+            sideWin.position.set(0.05, 1.04, side * 0.855);
+            if (side === -1) sideWin.rotation.y = Math.PI;
+            bodyGroup.add(sideWin);
+
+            // GT3 RS Side Door Decal
+            const decalMat = new THREE.MeshBasicMaterial({
+                map: decalTex,
+                transparent: true,
+                depthWrite: false
+            });
+            const decalPlane = new THREE.Mesh(new THREE.PlaneGeometry(1.75, 0.36), decalMat);
+            decalPlane.position.set(0.0, 0.36, side * 0.925);
+            if (side === -1) decalPlane.rotation.y = Math.PI;
+            bodyGroup.add(decalPlane);
+
+            // Side Intake Scoop behind doors (992 GT3 RS Turbo-style side intakes)
+            const intakeGeo = new THREE.BoxGeometry(0.32, 0.36, 0.14);
+            const intake = new THREE.Mesh(intakeGeo, carbonMat);
+            intake.position.set(0.84, 0.56, side * 0.94);
+            bodyGroup.add(intake);
+
+            // Carbon Side Skirts
+            const skirtGeo = new THREE.BoxGeometry(1.88, 0.06, 0.18);
+            const skirt = new THREE.Mesh(skirtGeo, carbonMat);
+            skirt.position.set(0.0, 0.16, side * 0.94);
+            bodyGroup.add(skirt);
+        });
+
+        // 4C. Front Splitter, Grille & Porsche 4-Point Matrix LED Headlights
+        const splitterGeo = new THREE.BoxGeometry(0.55, 0.04, 2.04);
+        const splitter = new THREE.Mesh(splitterGeo, carbonMat);
+        splitter.position.set(-2.15, 0.14, 0);
+        bodyGroup.add(splitter);
+
+        const frontGrilleGeo = new THREE.BoxGeometry(0.12, 0.24, 1.56);
+        const frontGrille = new THREE.Mesh(frontGrilleGeo, satinBlackMat);
+        frontGrille.position.set(-2.28, 0.28, 0);
+        bodyGroup.add(frontGrille);
+
+        const headLightMat = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: 0xdbeeff,
+            emissiveIntensity: 3.5
+        });
+
+        [-0.68, 0.68].forEach(zPos => {
+            const hlGroup = new THREE.Group();
+            hlGroup.position.set(-1.95, 0.62, zPos);
+            hlGroup.rotation.z = 0.38;
+            hlGroup.rotation.y = zPos > 0 ? 0.18 : -0.18;
+
+            // Oval housing
+            const housing = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.16, 0.16, 0.04, 24),
+                satinBlackMat
+            );
+            housing.rotation.z = Math.PI / 2;
+            housing.scale.set(1, 1.35, 0.85);
+            hlGroup.add(housing);
+
+            // 4-Point LED DRL signature dots
+            [[-0.05, 0.06], [0.05, 0.06], [-0.05, -0.06], [0.05, -0.06]].forEach(([dy, dz]) => {
+                const dot = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.025, 0.045), headLightMat);
+                dot.position.set(-0.015, dy, dz);
+                hlGroup.add(dot);
+            });
+
+            bodyGroup.add(hlGroup);
+        });
+
+        // 4D. Rear Light Bar, Diffuser & Center Twin Titanium Exhausts
+        const tailLightMat = new THREE.MeshStandardMaterial({
+            color: 0xff1111,
+            emissive: 0xff0000,
+            emissiveIntensity: 3.2
+        });
+
+        // Continuous 992 Rear LED Light Bar
+        const lightBarGeo = new THREE.BoxGeometry(0.06, 0.035, 1.72);
+        const lightBar = new THREE.Mesh(lightBarGeo, tailLightMat);
+        lightBar.position.set(2.34, 0.66, 0);
+        bodyGroup.add(lightBar);
+
+        // Aggressive Rear Venturi Diffuser with Vertical Fins
+        const diffuserGeo = new THREE.BoxGeometry(0.35, 0.16, 1.88);
+        const diffuser = new THREE.Mesh(diffuserGeo, carbonMat);
+        diffuser.position.set(2.22, 0.20, 0);
+        bodyGroup.add(diffuser);
+
+        for (let z = -0.8; z <= 0.8; z += 0.32) {
+            if (Math.abs(z) < 0.2) continue; // Space for center exhaust
+            const fin = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.18, 0.02), carbonMat);
+            fin.position.set(2.26, 0.18, z);
+            bodyGroup.add(fin);
+        }
+
+        // Center-Exit Twin Exhaust Pipes
+        [-0.08, 0.08].forEach(zPos => {
+            const pipeGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.22, 24);
+            pipeGeo.rotateZ(Math.PI / 2);
+            const pipe = new THREE.Mesh(pipeGeo, rimMat);
+            pipe.position.set(2.35, 0.22, zPos);
+            bodyGroup.add(pipe);
+        });
+
+        // 4E. Iconic Swan-Neck DRS Rear Wing (Taller than the roofline!)
+        const wingGroup = new THREE.Group();
+        carGroup.add(wingGroup);
+
+        // Dual Swan-Neck Pylons
+        [-0.36, 0.36].forEach(zPos => {
+            const pylonShape = new THREE.Shape();
+            pylonShape.moveTo(0, 0);
+            pylonShape.lineTo(0.22, 0.56);
+            pylonShape.lineTo(0.45, 0.58);
+            pylonShape.lineTo(0.42, 0.48);
+            pylonShape.lineTo(0.26, 0.46);
+            pylonShape.lineTo(0.14, 0);
+            pylonShape.closePath();
+
+            const pylonGeo = new THREE.ExtrudeGeometry(pylonShape, { depth: 0.025, bevelEnabled: false });
+            const pylon = new THREE.Mesh(pylonGeo, carbonMat);
+            pylon.position.set(1.68, 0.78, zPos - 0.012);
+            wingGroup.add(pylon);
+        });
+
+        // Lower Fixed Main Wing Element
+        const mainPlaneGeo = new THREE.BoxGeometry(0.26, 0.025, 1.92);
+        const mainPlane = new THREE.Mesh(mainPlaneGeo, carbonMat);
+        mainPlane.position.set(2.02, 1.28, 0);
+        mainPlane.rotation.z = 0.08;
+        wingGroup.add(mainPlane);
+
+        // Upper Active DRS Flap Element (Pivots on button click)
+        const drsFlapGeo = new THREE.BoxGeometry(0.18, 0.022, 1.92);
+        const drsFlap = new THREE.Mesh(drsFlapGeo, carbonMat);
+        drsFlap.position.set(2.14, 1.33, 0);
+        drsFlap.rotation.z = 0.36; // High downforce default angle
+        wingGroup.add(drsFlap);
+
+        // Massive Carbon Endplates
+        [-0.96, 0.96].forEach(zPos => {
+            const endplateGeo = new THREE.BoxGeometry(0.56, 0.42, 0.022);
+            const endplate = new THREE.Mesh(endplateGeo, carbonMat);
+            endplate.position.set(2.06, 1.24, zPos);
+            endplate.rotation.z = 0.12;
+            wingGroup.add(endplate);
+        });
+
+        // 4F. Center-Lock Forged Wheels, Michelin Tires & PCCB Brakes
+        const wheels = [];
+        function createWheelAssembly(x, y, z, radius, width, isRight) {
+            const wheelRoot = new THREE.Group();
+            wheelRoot.position.set(x, y, z);
+
+            const spinGroup = new THREE.Group();
+            wheelRoot.add(spinGroup);
+
+            // Tire Barrel with curved sidewall
+            const tireGeo = new THREE.CylinderGeometry(radius, radius, width, 48);
+            tireGeo.rotateX(Math.PI / 2);
+            const tire = new THREE.Mesh(tireGeo, tireMat);
+            tire.castShadow = true;
+            spinGroup.add(tire);
+
+            // Outer & Inner Rim Lip
+            const rimOuterGeo = new THREE.CylinderGeometry(radius * 0.72, radius * 0.72, width + 0.01, 36);
+            rimOuterGeo.rotateX(Math.PI / 2);
+            const rimBarrel = new THREE.Mesh(rimOuterGeo, rimMat);
+            spinGroup.add(rimBarrel);
+
+            // 7 Y-Spokes (Forged GT3 RS design)
+            const spokeOffsetZ = isRight ? width * 0.38 : -width * 0.38;
+            for (let i = 0; i < 7; i++) {
+                const baseAngle = (i / 7) * Math.PI * 2;
+                [-0.14, 0.14].forEach(forkAngle => {
+                    const spokeGeo = new THREE.BoxGeometry(radius * 0.66, 0.022, 0.025);
+                    const spoke = new THREE.Mesh(spokeGeo, rimMat);
+                    spoke.position.set(
+                        Math.cos(baseAngle + forkAngle) * (radius * 0.34),
+                        Math.sin(baseAngle + forkAngle) * (radius * 0.34),
+                        spokeOffsetZ
+                    );
+                    spoke.rotation.z = baseAngle + forkAngle * 1.8;
+                    spinGroup.add(spoke);
+                });
+            }
+
+            // Blue/Black Anodized Center-Lock Nut
+            const lockNutGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.05, 16);
+            lockNutGeo.rotateX(Math.PI / 2);
+            const lockNut = new THREE.Mesh(lockNutGeo, new THREE.MeshStandardMaterial({ color: 0x2255aa, metalness: 0.8, roughness: 0.2 }));
+            lockNut.position.z = isRight ? width * 0.44 : -width * 0.44;
+            spinGroup.add(lockNut);
+
+            // Cross-Drilled Ceramic Brake Rotor (rotates with wheel)
+            const rotorGeo = new THREE.CylinderGeometry(radius * 0.58, radius * 0.58, 0.035, 36);
+            rotorGeo.rotateX(Math.PI / 2);
+            const rotorMat = new THREE.MeshStandardMaterial({
+                map: rotorTex,
+                roughness: 0.35,
+                metalness: 0.75
+            });
+            const rotor = new THREE.Mesh(rotorGeo, rotorMat);
+            rotor.position.z = isRight ? width * 0.18 : -width * 0.18;
+            spinGroup.add(rotor);
+
+            // Stationary Yellow 6-Piston PCCB Brake Caliper
+            const caliperGeo = new THREE.BoxGeometry(0.14, 0.28, 0.11);
+            const caliper = new THREE.Mesh(caliperGeo, caliperMat);
+            caliper.position.set(x < 0 ? 0.18 : -0.18, 0.04, isRight ? width * 0.22 : -width * 0.22);
+            wheelRoot.add(caliper);
+
+            carGroup.add(wheelRoot);
+            wheels.push(spinGroup);
+        }
+
+        // Front 20-inch & Rear 21-inch Staggered Setup
+        createWheelAssembly(-1.36, 0.38, 0.86, 0.38, 0.32, true);
+        createWheelAssembly(-1.36, 0.38, -0.86, 0.38, 0.32, false);
+        createWheelAssembly(1.36, 0.41, 0.92, 0.41, 0.38, true);
+        createWheelAssembly(1.36, 0.41, -0.92, 0.41, 0.38, false);
+
+        // --- 5. STUDIO LIGHTING & REFLECTIVE SHOWROOM FLOOR ---
+        const floorGeo = new THREE.CircleGeometry(18, 64);
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: 0x111216,
+            roughness: 0.25,
+            metalness: 0.4
+        });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Overhead Softbox Studio Key Light
+        const keyLight = new THREE.SpotLight(0xffffff, 85);
+        keyLight.position.set(2, 7.5, 3);
+        keyLight.angle = Math.PI / 3;
+        keyLight.penumbra = 0.8;
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.width = 2048;
+        keyLight.shadow.mapSize.height = 2048;
+        keyLight.shadow.bias = -0.0005;
+        scene.add(keyLight);
+
+        // Cool Rim Light & Warm Accent Fill
+        const rimLight = new THREE.DirectionalLight(0xaaccff, 2.2);
+        rimLight.position.set(-6, 4, -5);
+        scene.add(rimLight);
+
+        const fillLight = new THREE.DirectionalLight(0xfff0dd, 1.4);
+        fillLight.position.set(5, 2, 5);
+        scene.add(fillLight);
+
+        // --- 6. INTERACTIVE CONTROLS & ANIMATION LOOP ---
+        let drsOpen = false;
+        let lightsOn = true;
+        let autoSpin = true;
+
+        document.getElementById('toggleWing').addEventListener('click', () => {
+            drsOpen = !drsOpen;
+        });
+
+        document.getElementById('toggleLights').addEventListener('click', () => {
+            lightsOn = !lightsOn;
+            headLightMat.emissiveIntensity = lightsOn ? 3.5 : 0.0;
+            tailLightMat.emissiveIntensity = lightsOn ? 3.2 : 0.0;
+        });
+
+        document.getElementById('toggleSpin').addEventListener('click', () => {
+            autoSpin = !autoSpin;
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Smooth DRS Flap interpolation
+            const targetFlapAngle = drsOpen ? 0.02 : 0.36;
+            drsFlap.rotation.z += (targetFlapAngle - drsFlap.rotation.z) * 0.1;
+
+            if (autoSpin) {
+                carGroup.rotation.y += 0.0035;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
